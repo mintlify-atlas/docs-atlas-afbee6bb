@@ -1,0 +1,76 @@
+{
+  "projectType": "api-service",
+  "projectName": "Q_SP API",
+  "projectDescription": "Spring Boot REST API for managing products, categories, and ingredients with PostgreSQL database",
+  "theme": "aspen",
+  "primaryColor": "#10B981",
+  "lightColor": "#34D399",
+  "darkColor": "#059669",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/data-model",
+              "concepts/authentication"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/railway",
+              "deployment/environment-variables",
+              "deployment/database-setup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/products",
+              "api/categories"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/product",
+              "api/models/category",
+              "api/models/ingredient"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "RESTful API with Spring Boot",
+    "Product and category management",
+    "PostgreSQL database integration",
+    "OpenAPI/Swagger documentation",
+    "CORS configuration for cross-origin requests",
+    "Railway deployment ready"
+  ],
+  "publicApiSurface": [
+    "GET /categories",
+    "GET /products",
+    "GET /products/category/{id}"
+  ]
+}
