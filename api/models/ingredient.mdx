@@ -1,0 +1,80 @@
+---
+title: "Ingredient Model"
+description: "Ingredient entity representing components that can be added to products"
+---
+
+## Overview
+
+The Ingredient model represents individual ingredients or add-ons that can be associated with products. This allows for tracking components, customizations, or add-ons for products in your system.
+
+## Model Structure
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the ingredient. Auto-generated using database identity strategy.
+  
+  **Database column:** `id_ingredients`
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  The name of the ingredient.
+  
+  **Database column:** `name_ingredients`
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the ingredient.
+  
+  **Database column:** `description`
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Flag indicating whether the ingredient is active and available for use.
+  
+  **Database column:** `active`
+</ResponseField>
+
+## Database Mapping
+
+- **Table name:** `ingredients`
+- **Primary key:** `id_ingredients` (auto-generated)
+- **Relationships:** Can be associated with products through a junction table (ProductIngredient)
+
+## Example JSON Representation
+
+<CodeGroup>
+
+```json Complete Ingredient
+{
+  "id": 1,
+  "name": "Mozzarella Cheese",
+  "description": "Fresh mozzarella cheese imported from Italy",
+  "active": true
+}
+```
+
+```json Simple Ingredient
+{
+  "id": 2,
+  "name": "Tomato Sauce",
+  "description": "House-made tomato sauce with Italian herbs",
+  "active": true
+}
+```
+
+```json Inactive Ingredient
+{
+  "id": 3,
+  "name": "Seasonal Truffle",
+  "description": "Premium truffle oil - seasonal availability",
+  "active": false
+}
+```
+
+</CodeGroup>
+
+## Usage Notes
+
+- Ingredients can be linked to products through the ProductIngredient junction table
+- The `active` flag allows soft-deletion of ingredients without removing them from the database
+- Inactive ingredients might still be displayed for historical orders but unavailable for new selections
+- Consider ingredient inventory management when marking items as active or inactive

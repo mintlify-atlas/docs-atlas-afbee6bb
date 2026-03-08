@@ -1,0 +1,361 @@
+---
+title: 'Data Model'
+description: 'Database schema, entity relationships, and data structure for the Q_SP API'
+---
+
+## Overview
+
+The Q_SP API uses a relational database model built on PostgreSQL. The data model consists of four main entities: Products, Categories, Ingredients, and a junction table for Product-Ingredient relationships.
+
+## Entity Relationship Diagram
+
+The database follows this structure:
+
+```
+Categories (1) ----< (N) Products (N) ----< (N) Products_Ingredients (N) >---- (N) Ingredients
+```
+
+- **Categories** have many **Products** (One-to-Many)
+- **Products** belong to one **Category** (Many-to-One)
+- **Products** and **Ingredients** have a Many-to-Many relationship via **ProductIngredient**
+
+## Core Entities
+
+### Product Entity
+
+The Product entity represents items available in the system.
+
+```java
+@Entity
+@Table(name = "products")
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_products")
+    private Long id;
+
+    @Column(name = "name_products")
+    private String name;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "price")
+    private Integer price;
+
+    @Column(name = "imge_url")
+    private String imageUrl;
+
+    @Column(name = "active")
+    private Boolean active;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+}
+```
+
+#### Product Table Schema
+
+| Column Name | Type | Constraints | Description |
+|-------------|------|-------------|-------------|
+| `id_products` | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Unique product identifier |
+| `name_products` | VARCHAR | | Product name |
+| `description` | VARCHAR | | Product description |
+| `price` | INTEGER | | Product price (in smallest currency unit) |
+| `imge_url` | VARCHAR | | URL to product image |
+| `active` | BOOLEAN | | Whether product is currently active |
+| `category_id` | BIGINT | FOREIGN KEY → categories.id | Reference to category |
+
+<Info>
+  The `price` field is stored as an INTEGER, representing the price in the smallest currency unit (e.g., cents). This prevents floating-point precision issues.
+</Info>
+
+### Category Entity
+
+Categories organize products into logical groups.
+
+```java
+@Entity
+@Table(name = "categories")
+public class Category {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "active")
+    private Boolean active;
+
+    @Column(name = "icon")
+    private String icon;
+}
+```
+
+#### Category Table Schema
+
+| Column Name | Type | Constraints | Description |
+|-------------|------|-------------|-------------|
+| `id` | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Unique category identifier |
+| `name` | VARCHAR | | Category name |
+| `description` | VARCHAR | | Category description |
+| `active` | BOOLEAN | | Whether category is currently active |
+| `icon` | VARCHAR | | Icon identifier or URL for UI display |
+
+### Ingredient Entity
+
+Ingredients represent components that can be added to products.
+
+```java
+@Entity
+@Table(name = "ingredients")
+public class Ingredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_ingredients")
+    private Long id;
+
+    @Column(name = "name_ingredients")
+    private String name;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "active")
+    private Boolean active;
+}
+```
+
+#### Ingredient Table Schema
+
+| Column Name | Type | Constraints | Description |
+|-------------|------|-------------|-------------|
+| `id_ingredients` | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Unique ingredient identifier |
+| `name_ingredients` | VARCHAR | | Ingredient name |
+| `description` | VARCHAR | | Ingredient description |
+| `active` | BOOLEAN | | Whether ingredient is currently active |
+
+### ProductIngredient Entity
+
+This junction table manages the many-to-many relationship between Products and Ingredients.
+
+```java
+@Entity
+@Table(name = "products_ingredients")
+public class ProductIngredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "products_id")
+    private Product product;
+
+    @ManyToOne
+    @JoinColumn(name = "ingredients_id")
+    private Ingredient ingredient;
+
+    @Column(name = "quantity")
+    private String quantity;
+}
+```
+
+#### ProductIngredient Table Schema
+
+| Column Name | Type | Constraints | Description |
+|-------------|------|-------------|-------------|
+| `id` | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Unique record identifier |
+| `products_id` | BIGINT | FOREIGN KEY → products.id_products | Reference to product |
+| `ingredients_id` | BIGINT | FOREIGN KEY → ingredients.id_ingredients | Reference to ingredient |
+| `quantity` | VARCHAR | | Quantity/amount of ingredient (flexible format) |
+
+<Note>
+  The `quantity` field is stored as VARCHAR to allow flexible quantity formats like "100g", "2 cups", "to taste", etc.
+</Note>
+
+## Relationships Explained
+
+### Product → Category (Many-to-One)
+
+Each product belongs to exactly one category, but a category can have multiple products.
+
+```java
+// In Product.java
+@ManyToOne
+@JoinColumn(name = "category_id")
+private Category category;
+```
+
+**Use Case**: Retrieve all products in a specific category:
+```java
+public interface ProductRepository extends JpaRepository<Product, Long> {
+    List<Product> findByCategoryId(Long categoryId);
+}
+```
+
+### Product ↔ Ingredient (Many-to-Many)
+
+Products can have multiple ingredients, and ingredients can be used in multiple products. This relationship is managed through the `ProductIngredient` junction table.
+
+```java
+// In ProductIngredient.java
+@ManyToOne
+@JoinColumn(name = "products_id")
+private Product product;
+
+@ManyToOne
+@JoinColumn(name = "ingredients_id")
+private Ingredient ingredient;
+```
+
+The junction table stores:
+- Which product uses which ingredient
+- The quantity of that ingredient for the product
+
+## JPA Annotations Reference
+
+<CardGroup cols={2}>
+  <Card title="@Entity" icon="table">
+    Marks a class as a JPA entity mapped to a database table
+  </Card>
+  <Card title="@Table" icon="database">
+    Specifies the table name in the database
+  </Card>
+  <Card title="@Id" icon="key">
+    Designates the primary key field
+  </Card>
+  <Card title="@GeneratedValue" icon="rotate">
+    Configures primary key generation strategy (IDENTITY = auto-increment)
+  </Card>
+  <Card title="@Column" icon="bars">
+    Maps a field to a specific database column
+  </Card>
+  <Card title="@ManyToOne" icon="arrow-right">
+    Defines a many-to-one relationship
+  </Card>
+  <Card title="@JoinColumn" icon="link">
+    Specifies the foreign key column name
+  </Card>
+</CardGroup>
+
+## Active Status Pattern
+
+All main entities include an `active` Boolean field:
+
+```java
+@Column(name = "active")
+private Boolean active;
+```
+
+This pattern enables:
+- **Soft deletes**: Mark items as inactive instead of deleting them
+- **Status filtering**: Show only active items to end users
+- **Data preservation**: Maintain historical records
+- **Reversible operations**: Reactivate items if needed
+
+<Info>
+  Consider adding filters to repository queries to automatically exclude inactive records when appropriate.
+</Info>
+
+## ID Generation Strategy
+
+All entities use `GenerationType.IDENTITY` for primary key generation:
+
+```java
+@Id
+@GeneratedValue(strategy = GenerationType.IDENTITY)
+private Long id;
+```
+
+This delegates ID generation to the database's auto-increment feature, which:
+- Ensures uniqueness at the database level
+- Works efficiently with PostgreSQL's SERIAL/BIGSERIAL types
+- Allows the database to handle concurrent inserts safely
+
+## Database Configuration
+
+The application connects to PostgreSQL with these JPA settings:
+
+```properties
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+```
+
+<Steps>
+  <Step title="PostgreSQL Dialect">
+    `PostgreSQLDialect` ensures Hibernate generates PostgreSQL-compatible SQL
+  </Step>
+  <Step title="Schema Management">
+    `ddl-auto=none` means Hibernate won't auto-create tables. The database schema must be created separately.
+  </Step>
+  <Step title="SQL Logging">
+    `show-sql=true` and `format_sql=true` enable formatted SQL query logging for debugging
+  </Step>
+</Steps>
+
+## Data Access Patterns
+
+The application uses Spring Data JPA repositories for data access:
+
+```java
+public interface ProductRepository extends JpaRepository<Product, Long> {
+    List<Product> findByCategoryId(Long categoryId);
+}
+
+public interface CategoryRepository extends JpaRepository<Category, Long> {
+}
+```
+
+### Standard Operations
+
+By extending `JpaRepository`, repositories automatically support:
+- `findAll()` - Get all entities
+- `findById(Long id)` - Get by primary key
+- `save(T entity)` - Insert or update
+- `deleteById(Long id)` - Delete by ID
+- `count()` - Count total records
+
+### Custom Queries
+
+Spring Data JPA derives queries from method names:
+
+```java
+List<Product> findByCategoryId(Long categoryId);
+```
+
+This automatically generates:
+```sql
+SELECT * FROM products WHERE category_id = ?
+```
+
+<Note>
+  Spring Data JPA supports complex query derivation including `findBy`, `countBy`, `deleteBy`, and combinations with `And`, `Or`, `OrderBy`, etc.
+</Note>
+
+## Best Practices
+
+1. **Use proper data types**: Store prices as integers to avoid floating-point issues
+2. **Leverage soft deletes**: Use `active` flags instead of hard deletes
+3. **Follow naming conventions**: Keep column names consistent (e.g., all use `id` or all use `id_[table]`)
+4. **Index foreign keys**: Ensure `category_id`, `products_id`, `ingredients_id` are indexed
+5. **Validate at entity level**: Add Bean Validation annotations for data integrity
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Learn about the layered architecture and Spring Boot integration
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore available API endpoints and operations
+  </Card>
+</CardGroup>

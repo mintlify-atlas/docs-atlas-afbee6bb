@@ -1,0 +1,231 @@
+---
+title: 'Products API'
+description: 'Endpoints for managing and retrieving product data'
+---
+
+## Get All Products
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:8080/products
+```
+
+```javascript JavaScript
+fetch('http://localhost:8080/products')
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+response = requests.get('http://localhost:8080/products')
+products = response.json()
+```
+</CodeGroup>
+
+### Endpoint
+
+`GET /products`
+
+Retrieves all products from the database.
+
+### Response
+
+Returns an array of product objects.
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the product
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  Name of the product
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the product
+</ResponseField>
+
+<ResponseField name="price" type="Integer">
+  Price of the product (in cents or smallest currency unit)
+</ResponseField>
+
+<ResponseField name="imageUrl" type="String">
+  URL to the product image
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Whether the product is currently active
+</ResponseField>
+
+<ResponseField name="category" type="Category">
+  Category object containing category details
+  
+  <ResponseField name="id" type="Long">
+    Category unique identifier
+  </ResponseField>
+  
+  <ResponseField name="name" type="String">
+    Category name
+  </ResponseField>
+  
+  <ResponseField name="description" type="String">
+    Category description
+  </ResponseField>
+  
+  <ResponseField name="active" type="Boolean">
+    Whether the category is active
+  </ResponseField>
+  
+  <ResponseField name="icon" type="String">
+    Category icon identifier
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Espresso",
+    "description": "Strong black coffee",
+    "price": 250,
+    "imageUrl": "https://example.com/espresso.jpg",
+    "active": true,
+    "category": {
+      "id": 1,
+      "name": "Coffee",
+      "description": "Hot coffee beverages",
+      "active": true,
+      "icon": "coffee-icon"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Cappuccino",
+    "description": "Espresso with steamed milk foam",
+    "price": 350,
+    "imageUrl": "https://example.com/cappuccino.jpg",
+    "active": true,
+    "category": {
+      "id": 1,
+      "name": "Coffee",
+      "description": "Hot coffee beverages",
+      "active": true,
+      "icon": "coffee-icon"
+    }
+  }
+]
+```
+
+---
+
+## Get Products by Category
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:8080/products/category/1
+```
+
+```javascript JavaScript
+const categoryId = 1;
+fetch(`http://localhost:8080/products/category/${categoryId}`)
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+category_id = 1
+response = requests.get(f'http://localhost:8080/products/category/{category_id}')
+products = response.json()
+```
+</CodeGroup>
+
+### Endpoint
+
+`GET /products/category/{id}`
+
+Retrieves all products that belong to a specific category.
+
+### Path Parameters
+
+<ParamField path="id" type="Long" required>
+  The unique identifier of the category
+</ParamField>
+
+### Response
+
+Returns an array of product objects that belong to the specified category. The response structure is identical to the "Get All Products" endpoint.
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the product
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  Name of the product
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the product
+</ResponseField>
+
+<ResponseField name="price" type="Integer">
+  Price of the product (in cents or smallest currency unit)
+</ResponseField>
+
+<ResponseField name="imageUrl" type="String">
+  URL to the product image
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Whether the product is currently active
+</ResponseField>
+
+<ResponseField name="category" type="Category">
+  Category object containing category details
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Espresso",
+    "description": "Strong black coffee",
+    "price": 250,
+    "imageUrl": "https://example.com/espresso.jpg",
+    "active": true,
+    "category": {
+      "id": 1,
+      "name": "Coffee",
+      "description": "Hot coffee beverages",
+      "active": true,
+      "icon": "coffee-icon"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Cappuccino",
+    "description": "Espresso with steamed milk foam",
+    "price": 350,
+    "imageUrl": "https://example.com/cappuccino.jpg",
+    "active": true,
+    "category": {
+      "id": 1,
+      "name": "Coffee",
+      "description": "Hot coffee beverages",
+      "active": true,
+      "icon": "coffee-icon"
+    }
+  }
+]
+```
+
+### Notes
+
+- If the category ID doesn't exist, an empty array will be returned
+- Products are filtered based on their `category_id` foreign key relationship

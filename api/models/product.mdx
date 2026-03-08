@@ -1,0 +1,110 @@
+---
+title: "Product Model"
+description: "Product entity representing items in the catalog with pricing, images, and category relationships"
+---
+
+## Overview
+
+The Product model represents individual items in your product catalog. Each product has basic information like name and description, pricing details, an image URL, and belongs to a category.
+
+## Model Structure
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the product. Auto-generated using database identity strategy.
+  
+  **Database column:** `id_products`
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  The name of the product.
+  
+  **Database column:** `name_products`
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the product.
+  
+  **Database column:** `description`
+</ResponseField>
+
+<ResponseField name="price" type="Integer">
+  Price of the product in the smallest currency unit (e.g., cents).
+  
+  **Database column:** `price`
+</ResponseField>
+
+<ResponseField name="imageUrl" type="String">
+  URL pointing to the product's image.
+  
+  **Database column:** `imge_url`
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Flag indicating whether the product is active and should be displayed.
+  
+  **Database column:** `active`
+</ResponseField>
+
+<ResponseField name="category" type="Category">
+  The category this product belongs to. Represents a Many-to-One relationship.
+  
+  **Relationship:** `@ManyToOne`
+  
+  **Join column:** `category_id`
+</ResponseField>
+
+## Relationships
+
+<Expandable title="Category Relationship">
+  Each product belongs to exactly one category. This is implemented as a `@ManyToOne` relationship, meaning multiple products can share the same category.
+  
+  The relationship is mapped using the `category_id` foreign key in the products table.
+</Expandable>
+
+## Database Mapping
+
+- **Table name:** `products`
+- **Primary key:** `id_products` (auto-generated)
+- **Foreign keys:** `category_id` (references categories table)
+
+## Example JSON Representation
+
+<CodeGroup>
+
+```json Complete Product
+{
+  "id": 1,
+  "name": "Margherita Pizza",
+  "description": "Classic Italian pizza with tomato sauce, mozzarella, and fresh basil",
+  "price": 1299,
+  "imageUrl": "https://example.com/images/margherita.jpg",
+  "active": true,
+  "category": {
+    "id": 2,
+    "name": "Pizzas",
+    "description": "Italian style pizzas",
+    "active": true,
+    "icon": "pizza-slice"
+  }
+}
+```
+
+```json Minimal Product
+{
+  "id": 1,
+  "name": "Margherita Pizza",
+  "description": "Classic Italian pizza",
+  "price": 1299,
+  "imageUrl": "https://example.com/images/margherita.jpg",
+  "active": true
+}
+```
+
+</CodeGroup>
+
+## Usage Notes
+
+- The `price` field is stored as an Integer, typically representing the smallest currency unit
+- Products must be associated with a valid Category
+- The `active` flag allows soft-deletion of products without removing them from the database
+- The `imageUrl` should point to a valid, accessible image resource

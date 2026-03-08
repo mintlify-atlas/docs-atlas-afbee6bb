@@ -1,0 +1,89 @@
+---
+title: "Category Model"
+description: "Category entity for organizing products into logical groups with icons and descriptions"
+---
+
+## Overview
+
+The Category model represents product categories in your system. Categories are used to organize products into logical groups, making it easier for users to browse and filter items.
+
+## Model Structure
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the category. Auto-generated using database identity strategy.
+  
+  **Database column:** `id`
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  The name of the category.
+  
+  **Database column:** `name`
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the category.
+  
+  **Database column:** `description`
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Flag indicating whether the category is active and should be displayed.
+  
+  **Database column:** `active`
+</ResponseField>
+
+<ResponseField name="icon" type="String">
+  Icon identifier or name associated with the category for UI display.
+  
+  **Database column:** `icon`
+</ResponseField>
+
+## Database Mapping
+
+- **Table name:** `categories`
+- **Primary key:** `id` (auto-generated)
+- **Relationships:** One-to-Many with Products (not explicitly mapped in this entity)
+
+## Example JSON Representation
+
+<CodeGroup>
+
+```json Complete Category
+{
+  "id": 1,
+  "name": "Beverages",
+  "description": "Hot and cold drinks including coffee, tea, and juices",
+  "active": true,
+  "icon": "coffee-cup"
+}
+```
+
+```json Minimal Category
+{
+  "id": 2,
+  "name": "Pizzas",
+  "description": "Italian style pizzas",
+  "active": true,
+  "icon": "pizza-slice"
+}
+```
+
+```json Inactive Category
+{
+  "id": 3,
+  "name": "Seasonal Items",
+  "description": "Limited time seasonal offerings",
+  "active": false,
+  "icon": "snowflake"
+}
+```
+
+</CodeGroup>
+
+## Usage Notes
+
+- Categories can contain multiple products (One-to-Many relationship)
+- The `active` flag allows soft-deletion of categories without removing them from the database
+- The `icon` field typically contains an icon name or identifier used by your frontend UI library
+- When a category is marked as inactive, consider how this affects associated products

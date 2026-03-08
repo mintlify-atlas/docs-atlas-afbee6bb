@@ -1,0 +1,103 @@
+---
+title: 'Categories API'
+description: 'Endpoints for retrieving category data'
+---
+
+## Get All Categories
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:8080/categories
+```
+
+```javascript JavaScript
+fetch('http://localhost:8080/categories')
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+```python Python
+import requests
+
+response = requests.get('http://localhost:8080/categories')
+categories = response.json()
+```
+</CodeGroup>
+
+### Endpoint
+
+`GET /categories`
+
+Retrieves all categories from the database.
+
+### Response
+
+Returns an array of category objects.
+
+<ResponseField name="id" type="Long">
+  Unique identifier for the category
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  Name of the category
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Detailed description of the category
+</ResponseField>
+
+<ResponseField name="active" type="Boolean">
+  Whether the category is currently active
+</ResponseField>
+
+<ResponseField name="icon" type="String">
+  Icon identifier or URL for the category
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Coffee",
+    "description": "Hot coffee beverages",
+    "active": true,
+    "icon": "coffee-icon"
+  },
+  {
+    "id": 2,
+    "name": "Tea",
+    "description": "Various tea options",
+    "active": true,
+    "icon": "tea-icon"
+  },
+  {
+    "id": 3,
+    "name": "Pastries",
+    "description": "Fresh baked goods",
+    "active": true,
+    "icon": "pastry-icon"
+  }
+]
+```
+
+### Database Schema
+
+The Category model maps to the `categories` table in PostgreSQL with the following structure:
+
+```sql
+CREATE TABLE categories (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(255),
+  description TEXT,
+  active BOOLEAN,
+  icon VARCHAR(255)
+);
+```
+
+### Notes
+
+- All categories are returned in a single request
+- Categories are used as foreign key references in the Products table
+- The `active` field can be used to filter visible categories in your application

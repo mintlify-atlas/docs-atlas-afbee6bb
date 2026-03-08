@@ -1,0 +1,68 @@
+---
+title: 'API Overview'
+description: 'Overview of the Q_SP REST API endpoints and configuration'
+---
+
+## Base URL
+
+The API runs on port `8080` by default (configurable via `PORT` environment variable).
+
+```
+http://localhost:8080
+```
+
+For production deployments, replace `localhost:8080` with your deployed API URL.
+
+## Available Endpoints
+
+The Q_SP API provides the following RESTful endpoints:
+
+### Products
+- `GET /products` - Retrieve all products
+- `GET /products/category/{id}` - Retrieve products by category ID
+
+### Categories
+- `GET /categories` - Retrieve all categories
+
+## Response Format
+
+All API endpoints return JSON responses. The response structure follows standard REST conventions:
+
+- **Success responses** return the requested data with HTTP 200 status
+- List endpoints return JSON arrays
+- Single resource endpoints return JSON objects
+
+## CORS Configuration
+
+The API is configured with permissive CORS settings:
+
+<CodeGroup>
+```java CorsConfig.java
+registry.addMapping("/**")
+    .allowedOrigins("*")
+    .allowedMethods("*")
+    .allowedHeaders("*");
+```
+</CodeGroup>
+
+- **Allowed Origins**: All origins (`*`)
+- **Allowed Methods**: All HTTP methods
+- **Allowed Headers**: All headers
+
+Each controller also includes `@CrossOrigin(origins = "*")` annotation for additional cross-origin support.
+
+## Authentication
+
+The API currently does not require authentication. All endpoints are publicly accessible.
+
+## Database
+
+The API uses PostgreSQL as the database backend with the following configuration:
+
+- **Database Platform**: PostgreSQL
+- **JPA/Hibernate**: DDL auto set to `none`
+- **SQL Logging**: Enabled for debugging
+
+## Content Type
+
+All responses are returned with `Content-Type: application/json` header.

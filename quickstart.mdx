@@ -1,80 +1,184 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get the Q_SP API running locally in minutes"
 ---
 
-## Get started in three steps
+## Get your API up and running
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through setting up the Q_SP API locally, from cloning the repository to making your first API call.
 
-### Step 1: Set up your local environment
+<Steps>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+### Clone the repository
 
-### Step 2: Deploy your changes
+Start by cloning the Q_SP API repository from GitHub:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+```bash
+git clone https://github.com/JhonnyDiaz4753/Api_Q_SP.git
+cd Api_Q_SP
+```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+### Set up PostgreSQL database
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+The Q_SP API requires a PostgreSQL database. You can either:
 
-### Step 3: Go live
+- Install PostgreSQL locally ([Download PostgreSQL](https://www.postgresql.org/download/))
+- Use a cloud provider like [Railway](https://railway.app) or [Neon](https://neon.tech)
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+**Create a database:**
 
-## Next steps
+```sql
+CREATE DATABASE q_sp_db;
+```
 
-Now that you have your docs running, explore these key features:
+You'll need to create the following tables:
+
+```sql
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    active BOOLEAN,
+    icon VARCHAR(255)
+);
+
+CREATE TABLE products (
+    id_products SERIAL PRIMARY KEY,
+    name_products VARCHAR(255),
+    description TEXT,
+    price INTEGER,
+    imge_url VARCHAR(255),
+    active BOOLEAN,
+    category_id INTEGER REFERENCES categories(id)
+);
+```
+
+<Note>
+The application uses `spring.jpa.hibernate.ddl-auto=none`, so you must create the database schema manually.
+</Note>
+
+### Configure environment variables
+
+Set the following environment variables for database connection:
+
+```bash
+export PGHOST=localhost
+export PGPORT=5432
+export PGDATABASE=q_sp_db
+export PGUSER=your_username
+export PGPASSWORD=your_password
+export PORT=8080
+```
+
+Or create a `.env` file in your project root (you'll need to load these manually or use a library).
+
+<Warning>
+Never commit your `.env` file or expose database credentials in your code.
+</Warning>
+
+### Build and run the application
+
+The Q_SP API uses Maven for dependency management. Build and run using the included Maven wrapper:
+
+**On Linux/macOS:**
+
+```bash
+./mvnw clean install
+./mvnw spring-boot:run
+```
+
+**On Windows:**
+
+```bash
+mvnw.cmd clean install
+mvnw.cmd spring-boot:run
+```
+
+You should see output indicating the application has started:
+
+```
+Started QSpApplication in X.XXX seconds
+```
+
+The API will be available at `http://localhost:8080`.
+
+### Make your first API call
+
+Test the API by fetching all categories:
+
+```bash
+curl http://localhost:8080/categories
+```
+
+You should receive a JSON response with your categories:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Bebidas",
+    "description": "Todas las bebidas",
+    "active": true,
+    "icon": "drink-icon.png"
+  }
+]
+```
+
+**Try fetching all products:**
+
+```bash
+curl http://localhost:8080/products
+```
+
+**Or get products by category:**
+
+```bash
+curl http://localhost:8080/products/category/1
+```
+
+</Steps>
+
+## Access API documentation
+
+The Q_SP API includes Springdoc OpenAPI integration. Once your application is running, access the interactive API documentation:
+
+- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **OpenAPI JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Configuration" icon="gear" href="/configuration">
+  Learn about all configuration options and environment variables
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="API Reference" icon="code" href="/api/overview">
+  Explore all available endpoints and their parameters
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Data Model" icon="database" href="/concepts/data-model">
+  Understand the database schema and entity relationships
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="Deploy to Railway" icon="train" href="/deployment/railway">
+  Deploy your API to production in minutes
 </Card>
 
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Next steps
+
+<Steps>
+
+### Populate your database
+
+Add some sample categories and products to test the API functionality.
+
+### Explore the endpoints
+
+Use the Swagger UI to test all available endpoints interactively.
+
+### Configure for production
+
+Review the [configuration guide](/configuration) to optimize settings for production deployment.
+
+</Steps>

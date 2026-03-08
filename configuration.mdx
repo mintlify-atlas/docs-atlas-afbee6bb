@@ -1,0 +1,278 @@
+---
+title: "Configuration"
+description: "Configure the Q_SP API for different environments"
+---
+
+## Overview
+
+The Q_SP API uses Spring Boot's configuration system with `application.properties`. Configuration values can be overridden using environment variables, making it easy to deploy across different environments.
+
+## Required environment variables
+
+These environment variables must be set for the application to run:
+
+### Database configuration
+
+<ParamField path="PGHOST" type="string" required>
+  PostgreSQL server hostname or IP address
+  
+  **Example**: `localhost` or `postgres.railway.internal`
+</ParamField>
+
+<ParamField path="PGPORT" type="string" required>
+  PostgreSQL server port
+  
+  **Default**: `5432`
+</ParamField>
+
+<ParamField path="PGDATABASE" type="string" required>
+  Database name
+  
+  **Example**: `q_sp_db`
+</ParamField>
+
+<ParamField path="PGUSER" type="string" required>
+  Database username
+  
+  **Example**: `postgres`
+</ParamField>
+
+<ParamField path="PGPASSWORD" type="string" required>
+  Database password
+  
+  <Warning>
+  Keep this secure and never commit it to version control
+  </Warning>
+</ParamField>
+
+### Server configuration
+
+<ParamField path="PORT" type="string" default="8080">
+  HTTP port the application listens on
+  
+  **Example**: `8080`, `3000`, `8000`
+</ParamField>
+
+## Application properties
+
+The complete configuration from `application.properties`:
+
+```properties
+spring.application.name=Q_SP
+server.port=${PORT:8080}
+
+# PostgreSQL Configuration (Railway)
+spring.datasource.url=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+spring.datasource.username=${PGUSER}
+spring.datasource.password=${PGPASSWORD}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate Configuration
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=none
+
+# Show SQL queries
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Logs
+logging.level.org.hibernate.SQL=DEBUG
+```
+
+## Configuration profiles
+
+### Development environment
+
+For local development, create a `.env` file or set environment variables:
+
+```bash
+export PGHOST=localhost
+export PGPORT=5432
+export PGDATABASE=q_sp_db
+export PGUSER=postgres
+export PGPASSWORD=your_password
+export PORT=8080
+```
+
+<Note>
+The `.env` file approach requires additional configuration or a library to load environment variables. Spring Boot reads system environment variables by default.
+</Note>
+
+### Production environment
+
+For production deployments (Railway, Heroku, AWS, etc.), set environment variables through your platform's configuration:
+
+```bash
+# Railway example
+PGHOST=postgres.railway.internal
+PGPORT=5432
+PGDATABASE=railway
+PGUSER=postgres
+PGPASSword=<generated_password>
+PORT=8080
+```
+
+## JPA and Hibernate settings
+
+### Database platform
+
+```properties
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+```
+
+Specifies the PostgreSQL dialect for Hibernate to generate optimized SQL queries.
+
+### DDL auto mode
+
+```properties
+spring.jpa.hibernate.ddl-auto=none
+```
+
+Set to `none` to prevent Hibernate from automatically creating or modifying database schema. You must create tables manually.
+
+<Warning>
+**Schema management**: With `ddl-auto=none`, you're responsible for creating and maintaining the database schema. Consider using a migration tool like Flyway or Liquibase for production.
+</Warning>
+
+**Available options:**
+
+- `none` - No schema management (current setting)
+- `validate` - Validate schema without making changes
+- `update` - Update schema if needed
+- `create` - Create schema on startup (drops existing)
+- `create-drop` - Create schema, drop on shutdown
+
+### SQL logging
+
+```properties
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+logging.level.org.hibernate.SQL=DEBUG
+```
+
+These settings enable SQL query logging for debugging. Consider disabling in production:
+
+```properties
+spring.jpa.show-sql=false
+logging.level.org.hibernate.SQL=INFO
+```
+
+## CORS configuration
+
+CORS is configured in the controllers:
+
+```java
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+    // Controller methods
+}
+```
+
+This allows requests from any origin. For production, restrict to specific domains:
+
+```java
+@CrossOrigin(origins = "https://your-frontend-domain.com")
+```
+
+Or configure globally in `CorsConfig.java` located at:
+
+`src/main/java/com/APIS/Q_SP/config/CorsConfig.java`
+
+## Dependencies
+
+Key dependencies from `pom.xml`:
+
+- **Spring Boot**: 4.0.3
+- **Java**: 21
+- **Spring Data JPA**: Database access layer
+- **Spring Web MVC**: REST API framework
+- **PostgreSQL Driver**: Database connectivity
+- **Lombok**: Reduce boilerplate code
+- **Springdoc OpenAPI**: 2.5.0 - API documentation
+
+## Example: Complete local setup
+
+Here's a complete example for local development:
+
+<Steps>
+
+### Set environment variables
+
+```bash
+export PGHOST=localhost
+export PGPORT=5432
+export PGDATABASE=q_sp_db
+export PGUSER=postgres
+export PGPASSWORD=mypassword
+export PORT=8080
+```
+
+### Verify configuration
+
+The application will use these environment variables to construct the JDBC URL:
+
+```
+jdbc:postgresql://localhost:5432/q_sp_db
+```
+
+### Run the application
+
+```bash
+./mvnw spring-boot:run
+```
+
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+
+<Accordion title="Connection refused error">
+Ensure PostgreSQL is running and the `PGHOST` and `PGPORT` are correct:
+
+```bash
+psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE
+```
+</Accordion>
+
+<Accordion title="Authentication failed">
+Verify your `PGUSER` and `PGPASSWORD` credentials are correct.
+</Accordion>
+
+<Accordion title="Database does not exist">
+Create the database before running the application:
+
+```sql
+CREATE DATABASE q_sp_db;
+```
+</Accordion>
+
+<Accordion title="Table doesn't exist">
+With `ddl-auto=none`, you must create tables manually. See the [Quickstart guide](/quickstart) for schema examples.
+</Accordion>
+
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+
+<Card title="Railway Deployment" icon="train" href="/deployment/railway">
+  Deploy your configured API to Railway
+</Card>
+
+<Card title="Environment Variables" icon="key" href="/deployment/environment-variables">
+  Advanced environment variable management
+</Card>
+
+<Card title="Database Setup" icon="database" href="/deployment/database-setup">
+  Complete database schema and migration guide
+</Card>
+
+<Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+  Understand the application architecture
+</Card>
+
+</CardGroup>

@@ -1,0 +1,312 @@
+---
+title: 'Environment Variables'
+description: 'Complete reference for Q_SP API configuration via environment variables'
+---
+
+## Overview
+
+The Q_SP API uses environment variables for configuration, making it easy to deploy across different environments without modifying the source code. This page documents all environment variables used by the application.
+
+## Database Configuration
+
+These variables configure the PostgreSQL database connection. All database variables are **required** for the application to start.
+
+### PGHOST
+
+<ParamField path="PGHOST" type="string" required>
+  The hostname or IP address of your PostgreSQL server.
+  
+  **Example values:**
+  - `localhost` (local development)
+  - `postgres.railway.internal` (Railway)
+  - `my-db.abc123.us-east-1.rds.amazonaws.com` (AWS RDS)
+</ParamField>
+
+<Note>
+  On Railway, this variable is automatically set when you add a PostgreSQL service.
+</Note>
+
+### PGPORT
+
+<ParamField path="PGPORT" type="string" required>
+  The port number on which PostgreSQL is listening.
+  
+  **Default:** `5432`
+  
+  **Example values:**
+  - `5432` (standard PostgreSQL port)
+  - `6543` (custom port)
+</ParamField>
+
+### PGDATABASE
+
+<ParamField path="PGDATABASE" type="string" required>
+  The name of the PostgreSQL database to connect to.
+  
+  **Example values:**
+  - `q_sp_db`
+  - `railway` (Railway default)
+  - `postgres` (common default)
+</ParamField>
+
+### PGUSER
+
+<ParamField path="PGUSER" type="string" required>
+  The PostgreSQL username for authentication.
+  
+  **Example values:**
+  - `postgres` (common default user)
+  - `q_sp_user` (custom user)
+  - `railway` (Railway default)
+</ParamField>
+
+### PGPASSWORD
+
+<ParamField path="PGPASSWORD" type="string" required>
+  The password for the PostgreSQL user.
+  
+  **Security considerations:**
+  - Never commit this to source control
+  - Use strong, randomly generated passwords
+  - Rotate passwords regularly
+</ParamField>
+
+<Warning>
+  Keep your database credentials secure. Never expose `PGPASSWORD` in logs or commit it to version control.
+</Warning>
+
+## Server Configuration
+
+### PORT
+
+<ParamField path="PORT" type="string" default="8080">
+  The HTTP port on which the application listens for requests.
+  
+  **Default:** `8080`
+  
+  **Example values:**
+  - `8080` (default)
+  - `3000`, `5000`, `8000` (common alternatives)
+  - Platform-assigned (Railway, Heroku automatically set this)
+</ParamField>
+
+<Note>
+  The application falls back to port 8080 if `PORT` is not set, making local development easier.
+</Note>
+
+## How Environment Variables Are Used
+
+### In application.properties
+
+The application uses Spring Boot's property placeholder syntax to reference environment variables:
+
+```properties
+# Server Configuration
+server.port=${PORT:8080}
+
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+spring.datasource.username=${PGUSER}
+spring.datasource.password=${PGPASSWORD}
+```
+
+The syntax `${VARIABLE:default}` means:
+- Use the environment variable `VARIABLE` if it exists
+- Otherwise, use the specified default value
+
+## Setting Environment Variables
+
+### Local Development
+
+<Tabs>
+  <Tab title="Linux/macOS">
+    ```bash
+    export PGHOST=localhost
+    export PGPORT=5432
+    export PGDATABASE=q_sp_db
+    export PGUSER=postgres
+    export PGPASSWORD=your_password
+    export PORT=8080
+    ```
+    
+    Or create a `.env` file and use:
+    ```bash
+    source .env
+    ```
+  </Tab>
+  
+  <Tab title="Windows (CMD)">
+    ```cmd
+    set PGHOST=localhost
+    set PGPORT=5432
+    set PGDATABASE=q_sp_db
+    set PGUSER=postgres
+    set PGPASSWORD=your_password
+    set PORT=8080
+    ```
+  </Tab>
+  
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:PGHOST="localhost"
+    $env:PGPORT="5432"
+    $env:PGDATABASE="q_sp_db"
+    $env:PGUSER="postgres"
+    $env:PGPASSWORD="your_password"
+    $env:PORT="8080"
+    ```
+  </Tab>
+  
+  <Tab title="IntelliJ IDEA">
+    1. Open **Run** → **Edit Configurations**
+    2. Select your Spring Boot run configuration
+    3. Add environment variables in the **Environment variables** field:
+    ```
+    PGHOST=localhost;PGPORT=5432;PGDATABASE=q_sp_db;PGUSER=postgres;PGPASSWORD=your_password;PORT=8080
+    ```
+  </Tab>
+</Tabs>
+
+### Railway Deployment
+
+On Railway, environment variables are set automatically for PostgreSQL:
+
+1. PostgreSQL service variables (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) are created when you add the database
+2. The `PORT` variable is automatically provided by Railway
+
+You can view and edit variables in:
+- Service settings → **Variables** tab
+
+### Docker
+
+When running with Docker, pass environment variables using the `-e` flag:
+
+```bash
+docker run -p 8080:8080 \
+  -e PGHOST=host.docker.internal \
+  -e PGPORT=5432 \
+  -e PGDATABASE=q_sp_db \
+  -e PGUSER=postgres \
+  -e PGPASSWORD=your_password \
+  -e PORT=8080 \
+  q-sp-api:latest
+```
+
+Or use a `.env` file with Docker Compose:
+
+```yaml
+version: '3.8'
+services:
+  api:
+    image: q-sp-api:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+```
+
+## Configuration Validation
+
+### Checking Current Configuration
+
+When the application starts, it logs the database connection URL (without credentials):
+
+```
+Hibernate: 
+    SELECT ... FROM products
+```
+
+You can also check the Spring Boot startup logs for:
+
+```
+Started QSpApplication in X.XXX seconds
+```
+
+### Common Configuration Issues
+
+<AccordionGroup>
+  <Accordion title="Application fails to start with database connection error">
+    **Symptom:** Error message like `Connection refused` or `Unknown host`
+    
+    **Solution:**
+    - Verify `PGHOST` is correct and the database server is running
+    - Check that `PGPORT` matches your PostgreSQL port
+    - Ensure firewall rules allow connections to the database
+  </Accordion>
+  
+  <Accordion title="Authentication failed for user">
+    **Symptom:** `FATAL: password authentication failed`
+    
+    **Solution:**
+    - Verify `PGUSER` and `PGPASSWORD` are correct
+    - Check that the user has permissions on the database
+    - Ensure no extra whitespace in environment variables
+  </Accordion>
+  
+  <Accordion title="Database does not exist">
+    **Symptom:** `FATAL: database "xyz" does not exist`
+    
+    **Solution:**
+    - Verify `PGDATABASE` matches an existing database
+    - Create the database if it doesn't exist
+    - Check for typos in the database name
+  </Accordion>
+  
+  <Accordion title="Port already in use">
+    **Symptom:** `Port 8080 is already in use`
+    
+    **Solution:**
+    - Set `PORT` to a different value
+    - Stop the process using the port
+    - Check with `lsof -i :8080` (Unix) or `netstat -ano | findstr :8080` (Windows)
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+<Card title="Environment Variable Security" icon="shield-halved">
+  1. **Never commit credentials** - Add `.env` files to `.gitignore`
+  2. **Use secrets management** - Consider tools like HashiCorp Vault or AWS Secrets Manager for production
+  3. **Rotate credentials regularly** - Change database passwords periodically
+  4. **Limit permissions** - Use database users with minimal required privileges
+  5. **Encrypt in transit** - Use SSL/TLS for database connections in production
+</Card>
+
+## Additional Configuration
+
+While not environment variables, the following are configured in `application.properties`:
+
+### JPA/Hibernate Settings
+
+```properties
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+```
+
+- `ddl-auto=none` - No automatic schema generation (manual setup required)
+- `show-sql=true` - SQL queries are logged (useful for debugging)
+
+### Logging
+
+```properties
+logging.level.org.hibernate.SQL=DEBUG
+```
+
+Enables detailed SQL logging for debugging.
+
+<Warning>
+  Consider setting `spring.jpa.show-sql=false` and `logging.level.org.hibernate.SQL=INFO` in production to reduce log verbosity.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Setup" icon="database" href="/deployment/database-setup">
+    Learn how to create and configure your PostgreSQL database
+  </Card>
+  <Card title="Deploy to Railway" icon="train" href="/deployment/railway">
+    Step-by-step Railway deployment guide
+  </Card>
+</CardGroup>

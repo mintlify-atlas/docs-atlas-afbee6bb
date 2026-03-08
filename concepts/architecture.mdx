@@ -1,0 +1,253 @@
+---
+title: 'Architecture Overview'
+description: 'Understanding the Spring Boot layered architecture and design patterns used in Q_SP API'
+---
+
+## Introduction
+
+The Q_SP API follows a traditional Spring Boot layered architecture pattern, providing clear separation of concerns and maintainability. The application is built on Spring Boot 4.0.3 with Java 21 and integrates with PostgreSQL for data persistence.
+
+## Application Structure
+
+The application uses the standard Spring Boot structure with the following key components:
+
+```java
+@SpringBootApplication
+public class QSpApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(QSpApplication.class, args);
+    }
+}
+```
+
+The `@SpringBootApplication` annotation enables:
+- Auto-configuration
+- Component scanning
+- Configuration properties
+
+## Layered Architecture
+
+The Q_SP API implements a three-tier layered architecture that promotes maintainability and testability.
+
+<Steps>
+  <Step title="Controller Layer">
+    Handles HTTP requests and responses. Controllers are responsible for:
+    - Routing incoming requests
+    - Input validation
+    - Delegating business logic to services
+    - Returning appropriate HTTP responses
+
+    Example from `ProductController.java`:
+    ```java
+    @CrossOrigin(origins = "*")
+    @RestController
+    @RequestMapping("/products")
+    public class ProductController {
+        @Autowired
+        private ProductService productService;
+
+        @GetMapping
+        public List<Product> getProducts(){
+            return productService.getAllProducts();
+        }
+        
+        @GetMapping("/category/{id}")
+        public List<Product> getProductsByCategory(@PathVariable Long id){
+            return productService.getProductsByCategory(id);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Service Layer">
+    Contains business logic and orchestrates data access. Services act as intermediaries between controllers and repositories.
+
+    Example from `ProductService.java`:
+    ```java
+    @Service
+    public class ProductService {
+        @Autowired
+        private ProductRepository productRepository;
+
+        public List<Product> getAllProducts(){
+            return productRepository.findAll();
+        }
+        
+        public List<Product> getProductsByCategory(Long categoryId){
+            return productRepository.findByCategoryId(categoryId);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Repository Layer">
+    Manages data persistence using Spring Data JPA. Repositories provide abstraction over database operations.
+
+    Example from `ProductRepository.java`:
+    ```java
+    public interface ProductRepository extends JpaRepository<Product, Long> {
+        List<Product> findByCategoryId(Long categoryId);
+    }
+    ```
+
+    <Note>
+      Spring Data JPA automatically implements common CRUD operations. Custom query methods like `findByCategoryId` are derived from the method name.
+    </Note>
+  </Step>
+</Steps>
+
+## Spring Data JPA Integration
+
+The application leverages Spring Data JPA for database operations, providing:
+
+### Entity Management
+
+Entities are mapped to database tables using Jakarta Persistence annotations:
+
+```java
+@Entity
+@Table(name = "products")
+public class Product {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_products")
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+    // ...
+}
+```
+
+### Repository Interfaces
+
+Repositories extend `JpaRepository<T, ID>` to inherit:
+- `findAll()` - Retrieve all entities
+- `findById(ID)` - Find by primary key
+- `save(T)` - Insert or update
+- `delete(T)` - Delete entity
+- Custom query methods via method naming conventions
+
+### Database Configuration
+
+The application connects to PostgreSQL using environment variables:
+
+```properties
+spring.datasource.url=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+spring.datasource.username=${PGUSER}
+spring.datasource.password=${PGPASSWORD}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+```
+
+<Info>
+  The `ddl-auto=none` setting means Hibernate will not automatically create or modify database schemas. Database structure is managed externally.
+</Info>
+
+## CORS Configuration
+
+The application implements CORS (Cross-Origin Resource Sharing) at both global and controller levels to enable cross-origin requests.
+
+### Global CORS Configuration
+
+From `CorsConfig.java`:
+
+```java
+@Configuration
+public class CorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("*")
+                        .allowedHeaders("*");
+            }
+        };
+    }
+}
+```
+
+This configuration:
+- Applies to all endpoints (`/**`)
+- Allows requests from any origin (`*`)
+- Permits all HTTP methods (GET, POST, PUT, DELETE, etc.)
+- Accepts all headers
+
+### Controller-Level CORS
+
+Controllers also use the `@CrossOrigin` annotation:
+
+```java
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/products")
+public class ProductController { ... }
+```
+
+<Note>
+  While convenient for development, allowing all origins (`*`) should be restricted in production environments. See the [Authentication](/concepts/authentication) section for security recommendations.
+</Note>
+
+## Dependency Injection
+
+The application uses Spring's dependency injection via the `@Autowired` annotation:
+
+```java
+@RestController
+public class ProductController {
+    @Autowired
+    private ProductService productService;  // Injected by Spring
+}
+```
+
+Benefits:
+- Loose coupling between components
+- Easy testing with mock dependencies
+- Centralized configuration
+
+## Key Dependencies
+
+From `pom.xml`, the application uses:
+
+<CardGroup cols={2}>
+  <Card title="Spring Boot Web MVC" icon="globe">
+    Provides REST API capabilities and web MVC framework
+  </Card>
+  <Card title="Spring Data JPA" icon="database">
+    Simplifies data access with JPA/Hibernate integration
+  </Card>
+  <Card title="PostgreSQL Driver" icon="elephant">
+    JDBC driver for PostgreSQL database connectivity
+  </Card>
+  <Card title="SpringDoc OpenAPI" icon="book">
+    Auto-generates OpenAPI documentation (Swagger UI)
+  </Card>
+</CardGroup>
+
+## Architecture Benefits
+
+This layered architecture provides:
+
+1. **Separation of Concerns**: Each layer has a distinct responsibility
+2. **Testability**: Layers can be tested independently with mocked dependencies
+3. **Maintainability**: Changes to one layer have minimal impact on others
+4. **Scalability**: Easy to add new features following established patterns
+5. **Flexibility**: Business logic is decoupled from data access and presentation
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Data Model" icon="diagram-project" href="/concepts/data-model">
+    Explore the database schema and entity relationships
+  </Card>
+  <Card title="Authentication" icon="lock" href="/concepts/authentication">
+    Learn about security and authentication configuration
+  </Card>
+</CardGroup>

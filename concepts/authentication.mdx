@@ -1,0 +1,419 @@
+---
+title: 'Authentication & Security'
+description: 'Security configuration, CORS policy, and authentication considerations for Q_SP API'
+---
+
+## Current Security Status
+
+The Q_SP API is currently configured as an **open API** with no authentication or authorization mechanisms in place. All endpoints are publicly accessible without credentials.
+
+<Note>
+  This configuration is suitable for development and testing environments but should be secured before production deployment.
+</Note>
+
+## CORS Configuration
+
+The application implements Cross-Origin Resource Sharing (CORS) to allow browser-based clients from different origins to access the API.
+
+### Global CORS Setup
+
+From `CorsConfig.java`:
+
+```java
+@Configuration
+public class CorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("*")
+                        .allowedHeaders("*");
+            }
+        };
+    }
+}
+```
+
+**Current Configuration**:
+- **Endpoints**: All (`/**`)
+- **Origins**: All origins allowed (`*`)
+- **Methods**: All HTTP methods (GET, POST, PUT, DELETE, PATCH, OPTIONS)
+- **Headers**: All headers accepted
+
+### Controller-Level CORS
+
+Controllers also include `@CrossOrigin` annotations:
+
+```java
+@CrossOrigin(origins = "*")
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+    // ...
+}
+```
+
+## Security Implications
+
+### Current Risk Profile
+
+<CardGroup cols={2}>
+  <Card title="No Authentication" icon="unlock" color="#ff6b6b">
+    Anyone can access all endpoints without proving identity
+  </Card>
+  <Card title="No Authorization" icon="users-slash" color="#ff6b6b">
+    No role-based access control to restrict operations
+  </Card>
+  <Card title="Open CORS" icon="globe" color="#ffd93d">
+    Any website can make requests to the API
+  </Card>
+  <Card title="No Rate Limiting" icon="gauge-high" color="#ffd93d">
+    Susceptible to abuse and DoS attacks
+  </Card>
+</CardGroup>
+
+### What This Means
+
+1. **Public Data Access**: Any client can retrieve all products, categories, and ingredients
+2. **No User Tracking**: Cannot identify who is making requests
+3. **No Access Control**: Cannot restrict operations to specific users or roles
+4. **Cross-Origin Requests**: Any web application can call this API from the browser
+
+## Production Security Recommendations
+
+For production deployment, implement the following security measures:
+
+### 1. Add Authentication
+
+<Steps>
+  <Step title="Choose Authentication Method">
+    Select an authentication mechanism appropriate for your use case:
+    
+    - **JWT (JSON Web Tokens)**: Stateless, scalable, suitable for REST APIs
+    - **OAuth 2.0**: Standard for delegated authorization
+    - **API Keys**: Simple, suitable for service-to-service communication
+    - **Session-based**: Traditional approach with server-side sessions
+  </Step>
+
+  <Step title="Add Spring Security Dependency">
+    Update `pom.xml`:
+    ```xml
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    ```
+  </Step>
+
+  <Step title="Configure Security">
+    Create a security configuration class:
+    ```java
+    @Configuration
+    @EnableWebSecurity
+    public class SecurityConfig {
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+            http
+                .csrf().disable()
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/api/public/**").permitAll()
+                    .anyRequest().authenticated()
+                )
+                .httpBasic();
+            return http.build();
+        }
+    }
+    ```
+  </Step>
+</Steps>
+
+### 2. Restrict CORS Origins
+
+Replace wildcard `*` with specific allowed origins:
+
+```java
+@Configuration
+public class CorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins(
+                            "https://yourfrontend.com",
+                            "https://app.yourcompany.com"
+                        )
+                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowedHeaders("Authorization", "Content-Type")
+                        .exposedHeaders("Authorization")
+                        .allowCredentials(true)
+                        .maxAge(3600);
+            }
+        };
+    }
+}
+```
+
+<Info>
+  When using credentials (cookies, authorization headers), you cannot use `allowedOrigins("*")`. You must specify exact origins.
+</Info>
+
+### 3. Implement JWT Authentication
+
+Example JWT-based authentication flow:
+
+<Steps>
+  <Step title="User Login">
+    ```java
+    @PostMapping("/auth/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        // Validate credentials
+        Authentication auth = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                request.getUsername(),
+                request.getPassword()
+            )
+        );
+        
+        // Generate JWT token
+        String token = jwtTokenProvider.generateToken(auth);
+        return ResponseEntity.ok(new JwtResponse(token));
+    }
+    ```
+  </Step>
+
+  <Step title="Add JWT Filter">
+    ```java
+    public class JwtAuthenticationFilter extends OncePerRequestFilter {
+        @Override
+        protected void doFilterInternal(HttpServletRequest request,
+                                      HttpServletResponse response,
+                                      FilterChain filterChain) {
+            String token = extractToken(request);
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                Authentication auth = jwtTokenProvider.getAuthentication(token);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+            filterChain.doFilter(request, response);
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Secure Endpoints">
+    ```java
+    @RestController
+    @RequestMapping("/products")
+    public class ProductController {
+        @GetMapping
+        @PreAuthorize("hasRole('USER')")
+        public List<Product> getProducts() {
+            return productService.getAllProducts();
+        }
+        
+        @PostMapping
+        @PreAuthorize("hasRole('ADMIN')")
+        public Product createProduct(@RequestBody Product product) {
+            return productService.save(product);
+        }
+    }
+    ```
+  </Step>
+</Steps>
+
+### 4. Add API Rate Limiting
+
+Protect against abuse using rate limiting:
+
+```xml
+<!-- Add Bucket4j dependency for rate limiting -->
+<dependency>
+    <groupId>com.giffing.bucket4j.spring.boot.starter</groupId>
+    <artifactId>bucket4j-spring-boot-starter</artifactId>
+    <version>0.9.0</version>
+</dependency>
+```
+
+Configuration example:
+```java
+@Component
+public class RateLimitInterceptor implements HandlerInterceptor {
+    private final Bucket bucket = Bucket4j.builder()
+        .addLimit(Bandwidth.classic(100, Refill.intervally(100, Duration.ofMinutes(1))))
+        .build();
+    
+    @Override
+    public boolean preHandle(HttpServletRequest request,
+                           HttpServletResponse response,
+                           Object handler) {
+        if (bucket.tryConsume(1)) {
+            return true;
+        }
+        response.setStatus(429); // Too Many Requests
+        return false;
+    }
+}
+```
+
+### 5. Enable HTTPS
+
+Configure SSL/TLS in `application.properties`:
+
+```properties
+server.port=8443
+server.ssl.key-store=classpath:keystore.p12
+server.ssl.key-store-password=yourpassword
+server.ssl.key-store-type=PKCS12
+server.ssl.key-alias=tomcat
+```
+
+<Note>
+  Always use HTTPS in production to encrypt data in transit, especially when transmitting authentication credentials.
+</Note>
+
+## Environment-Based Security
+
+Use Spring profiles to apply different security configurations:
+
+```java
+@Configuration
+@Profile("development")
+public class DevCorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("*")
+                        .allowedMethods("*");
+            }
+        };
+    }
+}
+
+@Configuration
+@Profile("production")
+public class ProdCorsConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("https://yourfrontend.com")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowCredentials(true);
+            }
+        };
+    }
+}
+```
+
+Activate profiles via environment variables:
+```bash
+SPRING_PROFILES_ACTIVE=production
+```
+
+## Security Checklist
+
+Before deploying to production:
+
+- [ ] Implement authentication (JWT, OAuth 2.0, or API keys)
+- [ ] Add authorization/role-based access control
+- [ ] Restrict CORS to specific origins
+- [ ] Enable HTTPS/SSL
+- [ ] Add rate limiting
+- [ ] Implement input validation
+- [ ] Add request logging and monitoring
+- [ ] Set up security headers (CSP, HSTS, X-Frame-Options)
+- [ ] Configure database connection encryption
+- [ ] Implement API versioning
+- [ ] Set up vulnerability scanning
+- [ ] Document security policies
+
+## Additional Security Measures
+
+### Input Validation
+
+Add Bean Validation to entities:
+
+```java
+@Entity
+public class Product {
+    @NotBlank(message = "Product name is required")
+    @Size(min = 3, max = 100)
+    private String name;
+    
+    @Min(value = 0, message = "Price must be positive")
+    private Integer price;
+    
+    @Pattern(regexp = "https?://.*", message = "Invalid URL format")
+    private String imageUrl;
+}
+```
+
+### Security Headers
+
+Add security headers to responses:
+
+```java
+@Configuration
+public class SecurityHeadersConfig {
+    @Bean
+    public WebMvcConfigurer securityHeadersConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                registry.addInterceptor(new HandlerInterceptor() {
+                    @Override
+                    public boolean preHandle(HttpServletRequest request,
+                                           HttpServletResponse response,
+                                           Object handler) {
+                        response.setHeader("X-Content-Type-Options", "nosniff");
+                        response.setHeader("X-Frame-Options", "DENY");
+                        response.setHeader("X-XSS-Protection", "1; mode=block");
+                        return true;
+                    }
+                });
+            }
+        };
+    }
+}
+```
+
+### Database Connection Security
+
+Secure database credentials using environment variables (already implemented):
+
+```properties
+spring.datasource.url=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+spring.datasource.username=${PGUSER}
+spring.datasource.password=${PGPASSWORD}
+```
+
+<Info>
+  Never commit database credentials to version control. Always use environment variables or secure vaults like AWS Secrets Manager or HashiCorp Vault.
+</Info>
+
+## Summary
+
+The Q_SP API currently operates without authentication, making it suitable for development but requiring significant security enhancements for production use. The open CORS policy allows any origin to access the API, which should be restricted to specific trusted domains.
+
+**Development**: Current configuration is acceptable
+**Production**: Implement authentication, restrict CORS, enable HTTPS, and add rate limiting
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Understand the application structure and design patterns
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore available endpoints and their usage
+  </Card>
+</CardGroup>
